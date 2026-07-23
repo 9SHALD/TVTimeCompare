@@ -37,6 +37,21 @@ Reader functions return an export result containing both the parsed `shows` and
 per-file diagnostics (`rows_read`, `rows_imported`, skipped-row counts, and
 skip reasons).
 
+## Desktop application
+
+Install the optional Qt interface and launch it with either command:
+
+```bash
+python -m pip install -e ".[gui]"
+tvtimecompare-gui
+# or: tvtimecompare gui
+```
+
+The desktop interface uses the same readers, comparison engine, and report
+generator as the CLI. It keeps work off the interface thread, shows import and
+comparison progress, summarizes the result, and can open the generated HTML
+report or report folder.
+
 ## Development
 
 ```bash

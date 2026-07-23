@@ -14,15 +14,13 @@ from rich.progress import (
 )
 from rich.table import Table
 
-from tvtimecompare.compare import ComparisonStatistics, compare_watched_episodes
+from tvtimecompare.compare import ComparisonStatistics
 from tvtimecompare.readers import (
     ParseDiagnostics,
     RefractExportError,
     TVTimeExportError,
-    read_refract_export,
-    read_tvtime_export,
 )
-from tvtimecompare.reports import generate_reports
+from tvtimecompare.services import run_comparison
 
 app = typer.Typer(
     name="tvtimecompare",
@@ -87,30 +85,42 @@ def compare(
             console=console,
         ) as progress:
             task_id = progress.add_task("Reading TV Time export", total=4)
-            tvtime_result = read_tvtime_export(tvtime_export)
-            progress.advance(task_id)
-            progress.update(task_id, description="Reading Refract export")
-            refract_result = read_refract_export(refract_export)
-            progress.advance(task_id)
-            progress.update(task_id, description="Comparing watched episodes")
-            result = compare_watched_episodes(
-                tvtime_result.shows, refract_result.shows
-            )
-            progress.advance(task_id)
-            progress.update(task_id, description="Generating reports")
-            report_paths = generate_reports(
-                result,
+            comparison_run = run_comparison(
+                tvtime_export,
+                refract_export,
                 output_dir,
-                diagnostics=(tvtime_result.diagnostics, refract_result.diagnostics),
+                on_progress=lambda completed, description: _update_progress(
+                    progress, task_id, completed, description
+                ),
             )
-            progress.advance(task_id)
     except (RefractExportError, TVTimeExportError) as error:
         console.print(f"[red]Export error:[/red] {error}")
         raise typer.Exit(code=1) from error
 
-    _print_statistics(result.statistics)
-    _print_diagnostics((tvtime_result.diagnostics, refract_result.diagnostics))
-    console.print(f"Reports written to [cyan]{report_paths.report_html.parent}[/cyan]")
+    _print_statistics(comparison_run.result.statistics)
+    _print_diagnostics(comparison_run.diagnostics)
+    console.print(
+        f"Reports written to [cyan]{comparison_run.report_paths.report_html.parent}[/cyan]"
+    )
+
+
+def _update_progress(
+    progress: Progress, task_id: int, completed: int, description: str
+) -> None:
+    """Synchronize a Rich task with the shared comparison workflow stages."""
+    progress.update(task_id, completed=completed, description=description)
+
+
+@app.command()
+def gui() -> None:
+    """Open the PySide6 desktop interface."""
+    try:
+        from tvtimecompare.gui import run_gui
+    except ImportError as error:
+        message = "GUI support is not installed. Install it with: pip install -e '.[gui]'"
+        console.print(f"[red]{message}[/red]")
+        raise typer.Exit(code=1) from error
+    raise typer.Exit(run_gui())
 
 
 def _print_statistics(statistics: ComparisonStatistics) -> None:
