@@ -1,5 +1,11 @@
 """Readers for TV Time and Refract export archives."""
 
+from tvtimecompare.readers.diagnostics import (
+    CsvParseError,
+    ExportReadResult,
+    ParseDiagnostics,
+    SkipReason,
+)
 from tvtimecompare.readers.refract import (
     RefractExportError,
     RefractReader,
@@ -14,6 +20,10 @@ from tvtimecompare.readers.tvtime import (
 __all__ = [
     "RefractExportError",
     "RefractReader",
+    "CsvParseError",
+    "ExportReadResult",
+    "ParseDiagnostics",
+    "SkipReason",
     "TVTimeExportError",
     "TVTimeReader",
     "read_refract_export",

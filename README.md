@@ -1,9 +1,8 @@
 # TVTimeCompare
 
-TVTimeCompare helps you validate a migration from a TV Time GDPR export to a
-Refract export. It will ultimately identify watched episodes present in TV Time
-but missing from Refract, including fuzzy matching for differently formatted
-show titles.
+TVTimeCompare validates a migration from a TV Time GDPR export to a Refract
+export. It identifies TV Time watched episodes missing from Refract and records
+any source rows omitted during parsing.
 
 ## Requirements
 
@@ -26,9 +25,13 @@ python -m pip install -e ".[dev]"
 tvtimecompare compare tvtime.zip refract.zip
 ```
 
-The `compare` command currently validates the input files and provides the
-command interface. Export parsing, matching, and report generation will follow
-in subsequent releases.
+The command reads both ZIP archives, compares watched episodes, writes CSV and
+HTML reports to `reports/`, and prints comparison and import diagnostics. Use
+`--output-dir` to choose another report directory.
+
+Reader functions return an export result containing both the parsed `shows` and
+per-file diagnostics (`rows_read`, `rows_imported`, skipped-row counts, and
+skip reasons).
 
 ## Development
 

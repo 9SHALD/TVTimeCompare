@@ -16,6 +16,7 @@ from rich.table import Table
 
 from tvtimecompare.compare import ComparisonStatistics, compare_watched_episodes
 from tvtimecompare.readers import (
+    ParseDiagnostics,
     RefractExportError,
     TVTimeExportError,
     read_refract_export,
@@ -86,22 +87,29 @@ def compare(
             console=console,
         ) as progress:
             task_id = progress.add_task("Reading TV Time export", total=4)
-            tvtime_shows = read_tvtime_export(tvtime_export)
+            tvtime_result = read_tvtime_export(tvtime_export)
             progress.advance(task_id)
             progress.update(task_id, description="Reading Refract export")
-            refract_shows = read_refract_export(refract_export)
+            refract_result = read_refract_export(refract_export)
             progress.advance(task_id)
             progress.update(task_id, description="Comparing watched episodes")
-            result = compare_watched_episodes(tvtime_shows, refract_shows)
+            result = compare_watched_episodes(
+                tvtime_result.shows, refract_result.shows
+            )
             progress.advance(task_id)
             progress.update(task_id, description="Generating reports")
-            report_paths = generate_reports(result, output_dir)
+            report_paths = generate_reports(
+                result,
+                output_dir,
+                diagnostics=(tvtime_result.diagnostics, refract_result.diagnostics),
+            )
             progress.advance(task_id)
     except (RefractExportError, TVTimeExportError) as error:
         console.print(f"[red]Export error:[/red] {error}")
         raise typer.Exit(code=1) from error
 
     _print_statistics(result.statistics)
+    _print_diagnostics((tvtime_result.diagnostics, refract_result.diagnostics))
     console.print(f"Reports written to [cyan]{report_paths.report_html.parent}[/cyan]")
 
 
@@ -120,4 +128,23 @@ def _print_statistics(statistics: ComparisonStatistics) -> None:
         ("Missing episodes", statistics.missing_episode_count),
     ):
         table.add_row(label, str(value))
+    console.print(table)
+
+
+def _print_diagnostics(diagnostics: tuple[ParseDiagnostics, ...]) -> None:
+    """Print source parsing diagnostics as a Rich table."""
+    table = Table(title="Import diagnostics")
+    table.add_column("Source file", style="bold")
+    table.add_column("Read", justify="right")
+    table.add_column("Imported", justify="right")
+    table.add_column("Skipped", justify="right")
+    table.add_column("Reasons")
+    for item in diagnostics:
+        table.add_row(
+            item.source_file,
+            str(item.rows_read),
+            str(item.rows_imported),
+            str(item.rows_skipped),
+            item.reason_summary(),
+        )
     console.print(table)

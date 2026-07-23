@@ -6,6 +6,7 @@ from typing import Literal
 
 from tvtimecompare.compare import compare_watched_episodes
 from tvtimecompare.models import Episode, Show
+from tvtimecompare.readers import ParseDiagnostics, SkipReason
 from tvtimecompare.reports import generate_reports
 
 
@@ -34,7 +35,13 @@ def test_generate_reports_writes_csv_and_searchable_html(tmp_path: Path) -> None
         {"matched": refract_matched},
     )
 
-    paths = generate_reports(result, tmp_path / "reports")
+    diagnostics = ParseDiagnostics(
+        source_file="episodes.csv",
+        rows_read=3,
+        rows_imported=2,
+        skipped_by_reason={SkipReason.DUPLICATE_EPISODE: 1},
+    )
+    paths = generate_reports(result, tmp_path / "reports", diagnostics=(diagnostics,))
 
     assert paths.summary_csv.name == "summary.csv"
     assert all(
@@ -55,6 +62,8 @@ def test_generate_reports_writes_csv_and_searchable_html(tmp_path: Path) -> None
 
     summary = {row["Metric"]: row["Value"] for row in summary_rows}
     assert summary["Missing episodes"] == "1"
+    assert summary["episodes.csv: rows skipped"] == "1"
+    assert summary["episodes.csv: duplicate episode"] == "1"
     assert missing_show_rows == [
         {
             "Display Title": "Missing Show",
@@ -81,3 +90,5 @@ def test_generate_reports_writes_csv_and_searchable_html(tmp_path: Path) -> None
     assert "table-search" in html
     assert "<details open>" in html
     assert "Matched Show" in html
+    assert "Import diagnostics" in html
+    assert "episodes.csv" in html

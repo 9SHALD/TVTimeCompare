@@ -42,6 +42,28 @@
     </section>
 
     <section>
+      <h2>Import diagnostics</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Source file</th><th>Rows read</th><th>Imported</th><th>Skipped</th><th>Reasons</th></tr></thead>
+          <tbody>
+          {% for diagnostic in diagnostics %}
+            <tr>
+              <td>{{ diagnostic.source_file }}</td>
+              <td>{{ diagnostic.rows_read }}</td>
+              <td>{{ diagnostic.rows_imported }}</td>
+              <td>{{ diagnostic.rows_skipped }}</td>
+              <td>{{ diagnostic.reason_summary() }}</td>
+            </tr>
+          {% else %}
+            <tr><td colspan="5" class="empty">No diagnostics were supplied.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section>
       <h2>Missing shows</h2>
       <input class="table-search" type="search" placeholder="Search missing shows" aria-label="Search missing shows">
       <div class="table-wrap">

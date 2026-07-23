@@ -42,6 +42,7 @@ def test_compare_reads_exports_and_generates_reports(tmp_path: Path) -> None:
 
     assert result.exit_code == 0
     assert "Comparison complete" in result.output
+    assert "Import diagnostics" in result.output
     assert "Reports written to" in result.output
     assert (output_dir / "summary.csv").is_file()
     assert (output_dir / "missing_shows.csv").is_file()
