@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TVTimeCompare report</title>
+  <style>
+    :root { color-scheme: light; font-family: Inter, ui-sans-serif, system-ui, sans-serif; color: #172033; background: #f5f7fb; }
+    body { margin: 0; }
+    main { max-width: 1120px; margin: auto; padding: 3rem 1.25rem 4rem; }
+    h1 { margin-bottom: .35rem; font-size: clamp(2rem, 5vw, 3rem); }
+    h2 { margin-top: 2.75rem; }
+    .subtitle { color: #64748b; margin-top: 0; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; }
+    .card, details { background: #fff; border: 1px solid #e2e8f0; border-radius: .75rem; box-shadow: 0 1px 3px #1720330d; }
+    .card { padding: 1rem; }
+    .card strong { display: block; color: #0f766e; font-size: 1.8rem; }
+    .card span { color: #64748b; font-size: .9rem; }
+    input { box-sizing: border-box; width: 100%; margin: .75rem 0; padding: .7rem .85rem; border: 1px solid #cbd5e1; border-radius: .5rem; font: inherit; }
+    .table-wrap { overflow-x: auto; background: #fff; border: 1px solid #e2e8f0; border-radius: .75rem; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: .8rem 1rem; text-align: left; border-bottom: 1px solid #e2e8f0; }
+    th { background: #f8fafc; color: #475569; font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; }
+    tr:last-child td { border-bottom: 0; }
+    details { margin: .75rem 0; overflow: hidden; }
+    summary { cursor: pointer; padding: 1rem; font-weight: 650; }
+    details > div { padding: 0 1rem 1rem; }
+    .badge { display: inline-block; margin-left: .5rem; padding: .1rem .45rem; border-radius: 999px; color: #0f766e; background: #ccfbf1; font-size: .8rem; }
+    .empty { color: #64748b; font-style: italic; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Migration comparison</h1>
+    <p class="subtitle">TV Time watched episodes missing from Refract.</p>
+    <section class="cards" aria-label="Comparison statistics">
+      <div class="card"><strong>{{ statistics.tvtime_show_count }}</strong><span>TV Time shows</span></div>
+      <div class="card"><strong>{{ statistics.refract_show_count }}</strong><span>Refract shows</span></div>
+      <div class="card"><strong>{{ statistics.matched_show_count }}</strong><span>Matched shows</span></div>
+      <div class="card"><strong>{{ statistics.missing_show_count }}</strong><span>Missing shows</span></div>
+      <div class="card"><strong>{{ statistics.missing_episode_count }}</strong><span>Missing episodes</span></div>
+    </section>
+
+    <section>
+      <h2>Missing shows</h2>
+      <input class="table-search" type="search" placeholder="Search missing shows" aria-label="Search missing shows">
+      <div class="table-wrap">
+        <table class="searchable">
+          <thead><tr><th>Title</th><th>Source ID</th><th>Episodes</th></tr></thead>
+          <tbody>
+          {% for show in missing_shows %}
+            <tr><td>{{ show.display_title }}</td><td>{{ show.source_show_id or "—" }}</td><td>{{ show.episodes | length }}</td></tr>
+          {% else %}
+            <tr><td colspan="3" class="empty">No missing shows.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section>
+      <h2>Missing episodes</h2>
+      <input class="table-search" type="search" placeholder="Search missing episodes" aria-label="Search missing episodes">
+      {% for section in missing_episode_sections %}
+        <details open>
+          <summary>{{ section.tvtime_title }} <span class="badge">{{ section.episodes | length }} missing</span></summary>
+          <div>
+            <p class="subtitle">Matched to {{ section.refract_title }} via {{ section.method }}.</p>
+            <div class="table-wrap">
+              <table class="searchable">
+                <thead><tr><th>Season</th><th>Episode</th></tr></thead>
+                <tbody>
+                {% for missing_episode in section.episodes %}
+                  <tr><td>{{ missing_episode.episode_key.season_number }}</td><td>{{ missing_episode.episode_key.episode_number }}</td></tr>
+                {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </details>
+      {% else %}
+        <p class="empty">No missing episodes.</p>
+      {% endfor %}
+    </section>
+  </main>
+  <script>
+    document.querySelectorAll('.table-search').forEach((input) => {
+      input.addEventListener('input', () => {
+        const query = input.value.toLowerCase();
+        const section = input.closest('section');
+        section.querySelectorAll('.searchable tbody tr').forEach((row) => {
+          row.hidden = !row.textContent.toLowerCase().includes(query);
+        });
+      });
+    });
+  </script>
+</body>
+</html>
