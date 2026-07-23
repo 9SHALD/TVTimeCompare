@@ -27,3 +27,6 @@ htmlcov/
 # Application output and private exports
 /reports/
 *.zip
+
+# Sample data
+sample_data/

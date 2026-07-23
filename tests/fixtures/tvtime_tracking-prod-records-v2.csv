@@ -1,0 +1,4 @@
+ep_no,created_at,runtime,episode_id,gsi,bulk_type,series_name,season_number,user_id,s_id,ep_id,episode_number,key,s_no,total_series_runtime,updated_at,total_movies_runtime,movie_watch_count,ep_watch_count,series_follow_count,uuid,most_recent_ep_watched,is_for_later,is_archived,is_followed,followed_at,is_unitary,rewatch_count,is_special
+13,2025-01-03 00:15:09,2700,349302,watch-episode-1735863309,season,Chuck,1,50809977,80348,349302,13,rewatch-episode-1b761ee9-37c0-4018-83c6-d32737c79e0e-0000ae47-2619-4975-a7bc-686f3d709569-1,1,,,,,,,,,,,,,,,
+13,2022-10-24 19:40:12,2700,349302,watch-episode-1666630812,season,Chuck,1,50809977,80348,349302,13,watch-episode-1b761ee9-37c0-4018-83c6-d32737c79e0e-0000ae47-2619-4975-a7bc-686f3d709569,1,,,,,,,1,,,,,,,,
+22,2025-01-06 22:56:21,2700,3864371,watch-episode-1736204181,season,Chuck,4,50809977,80348,3864371,22,rewatch-episode-1b761ee9-37c0-4018-83c6-d32737c79e0e-028d4978-dd7b-4d7d-9c94-80dfe3c947c3-1,4,,,,,,,,,,,,,,,
