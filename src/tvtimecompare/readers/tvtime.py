@@ -4,6 +4,7 @@ from pathlib import Path
 from zipfile import BadZipFile, ZipFile
 
 import pandas as pd
+from pandas.errors import EmptyDataError, ParserError
 
 from tvtimecompare.models import Episode, Show
 from tvtimecompare.utils import normalize_title
@@ -67,59 +68,97 @@ class TVTimeReader:
 
 
 def _read_primary(archive: ZipFile) -> dict[str, Show]:
-    with archive.open(_PRIMARY_FILENAME) as csv_file:
-        records = pd.read_csv(csv_file, dtype="string")
+    records = _read_csv(archive, _PRIMARY_FILENAME)
     _require_columns(records, _PRIMARY_REQUIRED_COLUMNS, _PRIMARY_FILENAME)
 
     shows: dict[str, Show] = {}
+    seen_episode_ids: dict[str, set[str]] = {}
     for row in records.itertuples(index=False):
         title = row.series_name
         show_id = row.s_id
+        episode_id = row.episode_id
         season = _to_episode_number(row.season_number)
         episode = _to_episode_number(row.episode_number)
-        if pd.isna(title) or pd.isna(show_id) or season is None or episode is None:
+        if (
+            pd.isna(title)
+            or pd.isna(show_id)
+            or pd.isna(episode_id)
+            or season is None
+            or episode is None
+        ):
             continue
         title_text = str(title).strip()
         show_id_text = str(show_id).strip()
+        episode_id_text = str(episode_id).strip()
         normalized_title = normalize_title(title_text)
-        if not title_text or not show_id_text or not normalized_title:
+        if (
+            not title_text
+            or not show_id_text
+            or not episode_id_text
+            or not normalized_title
+        ):
             continue
+        if episode_id_text in seen_episode_ids.setdefault(show_id_text, set()):
+            continue
+        seen_episode_ids[show_id_text].add(episode_id_text)
         show = shows.setdefault(
             show_id_text,
             Show(
-                original_title=title_text,
+                display_title=title_text,
                 normalized_title=normalized_title,
-                source_id=show_id_text,
+                source="tvtime",
+                source_show_id=show_id_text,
             ),
         )
-        # Each rewatch is a separate row with the same episode_id and a
-        # ``rewatch-episode-*`` key. A set deliberately keeps one episode.
-        show.watched_episodes.add(Episode(season, episode))
+        show.add_episode(Episode(season, episode, episode_id_text))
     return shows
 
 
 def _read_fallback(archive: ZipFile) -> dict[str, Show]:
-    with archive.open(_FALLBACK_FILENAME) as csv_file:
-        records = pd.read_csv(csv_file, dtype="string")
+    records = _read_csv(archive, _FALLBACK_FILENAME)
     _require_columns(records, _FALLBACK_REQUIRED_COLUMNS, _FALLBACK_FILENAME)
 
     shows: dict[str, Show] = {}
+    seen_episode_ids: dict[str, set[str]] = {}
     for row in records.itertuples(index=False):
         title = row.tv_show_name
+        episode_id = row.episode_id
         season = _to_episode_number(row.episode_season_number)
         episode = _to_episode_number(row.episode_number)
-        if pd.isna(title) or season is None or episode is None:
+        if pd.isna(title) or pd.isna(episode_id) or season is None or episode is None:
             continue
         title_text = str(title).strip()
+        episode_id_text = str(episode_id).strip()
         normalized_title = normalize_title(title_text)
-        if not title_text or not normalized_title:
+        if not title_text or not episode_id_text or not normalized_title:
             continue
+        if episode_id_text in seen_episode_ids.setdefault(normalized_title, set()):
+            continue
+        seen_episode_ids[normalized_title].add(episode_id_text)
         show = shows.setdefault(
             normalized_title,
-            Show(original_title=title_text, normalized_title=normalized_title),
+            Show(
+                display_title=title_text,
+                normalized_title=normalized_title,
+                source="tvtime",
+            ),
         )
-        show.watched_episodes.add(Episode(season, episode))
+        show.add_episode(Episode(season, episode, episode_id_text))
     return shows
+
+
+def _read_csv(archive: ZipFile, filename: str) -> pd.DataFrame:
+    try:
+        with archive.open(filename) as csv_file:
+            return pd.read_csv(
+                csv_file,
+                dtype="string",
+                encoding="utf-8-sig",
+                on_bad_lines="skip",
+            )
+    except (EmptyDataError, ParserError, UnicodeDecodeError) as error:
+        message = f"{filename} could not be parsed as UTF-8 CSV."
+        raise TVTimeExportError(message) from error
 
 
 def _require_columns(

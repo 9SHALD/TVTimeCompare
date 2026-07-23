@@ -4,6 +4,7 @@ from pathlib import Path
 from zipfile import BadZipFile, ZipFile
 
 import pandas as pd
+from pandas.errors import EmptyDataError, ParserError
 
 from tvtimecompare.models import Episode, Show
 from tvtimecompare.utils import normalize_title
@@ -42,13 +43,19 @@ class RefractReader:
                     )
                 with archive.open(_EPISODES_FILENAME) as csv_file:
                     records = pd.read_csv(
-                        csv_file, dtype="string", encoding="utf-8-sig"
+                        csv_file,
+                        dtype="string",
+                        encoding="utf-8-sig",
+                        on_bad_lines="skip",
                     )
         except FileNotFoundError as error:
             message = f"Refract export was not found: {self.export_path}"
             raise RefractExportError(message) from error
         except BadZipFile as error:
             message = f"Refract export is not a valid ZIP file: {self.export_path}"
+            raise RefractExportError(message) from error
+        except (EmptyDataError, ParserError, UnicodeDecodeError) as error:
+            message = f"{_EPISODES_FILENAME} could not be parsed as UTF-8 CSV."
             raise RefractExportError(message) from error
 
         missing_columns = _REQUIRED_COLUMNS.difference(records.columns)
@@ -73,9 +80,13 @@ def _build_shows(records: pd.DataFrame) -> dict[str, Show]:
             continue
         show = shows.setdefault(
             normalized_title,
-            Show(original_title=title, normalized_title=normalized_title),
+            Show(
+                display_title=title,
+                normalized_title=normalized_title,
+                source="refract",
+            ),
         )
-        show.watched_episodes.add(Episode(season, episode))
+        show.add_episode(Episode(season, episode))
     return shows
 
 
