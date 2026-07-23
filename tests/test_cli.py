@@ -1,25 +1,52 @@
 """Tests for the command-line interface."""
 
 from pathlib import Path
+from zipfile import ZipFile
 
 from typer.testing import CliRunner
 
 from tvtimecompare.cli import app
 
 runner = CliRunner()
+_FIXTURES = Path(__file__).parent / "fixtures"
 
 
-def test_compare_accepts_zip_exports(tmp_path: Path) -> None:
-    """The placeholder command accepts two ZIP-named export files."""
-    tvtime_export = tmp_path / "tvtime.zip"
-    refract_export = tmp_path / "refract.zip"
-    tvtime_export.touch()
-    refract_export.touch()
+def _archive_with(path: Path, name: str, fixture_name: str) -> Path:
+    with ZipFile(path, "w") as archive:
+        archive.write(_FIXTURES / fixture_name, arcname=name)
+    return path
 
-    result = runner.invoke(app, ["compare", str(tvtime_export), str(refract_export)])
+
+def test_compare_reads_exports_and_generates_reports(tmp_path: Path) -> None:
+    """The command completes the full import, comparison, and report workflow."""
+    tvtime_export = _archive_with(
+        tmp_path / "tvtime.zip",
+        "tracking-prod-records-v2.csv",
+        "tvtime_tracking-prod-records-v2.csv",
+    )
+    refract_export = _archive_with(
+        tmp_path / "refract.zip", "episodes.csv", "refract_episodes.csv"
+    )
+    output_dir = tmp_path / "reports"
+
+    result = runner.invoke(
+        app,
+        [
+            "compare",
+            str(tvtime_export),
+            str(refract_export),
+            "--output-dir",
+            str(output_dir),
+        ],
+    )
 
     assert result.exit_code == 0
-    assert "Comparison is not implemented yet." in result.output
+    assert "Comparison complete" in result.output
+    assert "Reports written to" in result.output
+    assert (output_dir / "summary.csv").is_file()
+    assert (output_dir / "missing_shows.csv").is_file()
+    assert (output_dir / "missing_episodes.csv").is_file()
+    assert (output_dir / "report.html").is_file()
 
 
 def test_compare_rejects_non_zip_export(tmp_path: Path) -> None:
