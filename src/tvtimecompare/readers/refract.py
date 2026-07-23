@@ -21,8 +21,8 @@ def read_refract_export(export_path: Path) -> dict[str, Show]:
     """Read watched episodes from a Refract export ZIP archive.
 
     The Refract sample has no stable show ID. Shows are therefore keyed by the
-    normalized ``ShowOriginalTitle``; ``ShowTitle`` is used only when the
-    original title is blank.
+    normalized ``ShowTitle`` when available, falling back to
+    ``ShowOriginalTitle``.
     """
     return RefractReader(export_path).read()
 
@@ -34,7 +34,7 @@ class RefractReader:
         self.export_path = export_path
 
     def read(self) -> dict[str, Show]:
-        """Return shows keyed by normalized original title."""
+        """Return shows keyed by normalized display title."""
         try:
             with ZipFile(self.export_path) as archive:
                 if _EPISODES_FILENAME not in archive.namelist():
@@ -70,7 +70,7 @@ class RefractReader:
 def _build_shows(records: pd.DataFrame) -> dict[str, Show]:
     shows: dict[str, Show] = {}
     for row in records.itertuples(index=False):
-        title = _title(row.ShowOriginalTitle, row.ShowTitle)
+        title = _title(row.ShowTitle, row.ShowOriginalTitle)
         season = _to_episode_number(row.Season)
         episode = _to_episode_number(row.Episode)
         if title is None or season is None or episode is None:
@@ -90,8 +90,8 @@ def _build_shows(records: pd.DataFrame) -> dict[str, Show]:
     return shows
 
 
-def _title(original_title: object, title: object) -> str | None:
-    for value in (original_title, title):
+def _title(display_title: object, original_title: object) -> str | None:
+    for value in (display_title, original_title):
         if not pd.isna(value) and str(value).strip():
             return str(value).strip()
     return None

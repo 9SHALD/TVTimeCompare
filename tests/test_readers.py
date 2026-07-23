@@ -60,7 +60,7 @@ def test_tvtime_reader_uses_seen_episode_when_primary_is_absent(tmp_path: Path) 
     assert show.watched_episodes == {Episode(2, 1)}
 
 
-def test_refract_reader_uses_original_title_when_display_title_is_empty(
+def test_refract_reader_prefers_display_title_and_falls_back_to_original_title(
     tmp_path: Path,
 ) -> None:
     export = _archive_with(
@@ -71,8 +71,10 @@ def test_refract_reader_uses_original_title_when_display_title_is_empty(
 
     assert shows["example anime"].display_title == "Example Anime"
     assert shows["example anime"].watched_episodes == {Episode(1, 1)}
-    assert shows["example show"].display_title == "EXAMPLE SHOW"
+    assert shows["example show"].display_title == "Example Show"
     assert shows["example show"].watched_episodes == {Episode(1, 2)}
+    assert shows["example show"].source == "refract"
+    assert shows["example show"].source_show_id is None
 
 
 def test_readers_accept_bom_and_skip_malformed_rows(tmp_path: Path) -> None:
