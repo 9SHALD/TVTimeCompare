@@ -22,8 +22,8 @@ _REFRACT_EXPORT = _SAMPLE_DATA / "refract" / "refract-export.zip"
 @pytest.fixture(scope="module")
 def parsed_sample_exports() -> tuple[ExportReadResult, ExportReadResult]:
     """Parse each supplied archive once for the sample-export regression suite."""
-    assert _TVTIME_EXPORT.is_file(), f"Missing development export: {_TVTIME_EXPORT}"
-    assert _REFRACT_EXPORT.is_file(), f"Missing development export: {_REFRACT_EXPORT}"
+    if not _TVTIME_EXPORT.is_file() or not _REFRACT_EXPORT.is_file():
+        pytest.skip("Supplied development exports are not available in this checkout.")
     return read_tvtime_export(_TVTIME_EXPORT), read_refract_export(_REFRACT_EXPORT)
 
 
