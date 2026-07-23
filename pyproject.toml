@@ -20,6 +20,8 @@ classifiers = [
   "Programming Language :: Python :: 3 :: Only",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Operating System :: Microsoft :: Windows",
+  "Operating System :: MacOS",
 ]
 dependencies = [
   "jinja2>=3.1.4",
@@ -38,6 +40,9 @@ dev = [
 ]
 gui = [
   "pyside6>=6.8.0",
+]
+bundle = [
+  "pyinstaller>=6.11.1",
 ]
 
 [project.scripts]

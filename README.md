@@ -12,7 +12,18 @@ the next candidate; uncertain matches are reported separately for review.
 
 - Python 3.12 or later
 
-## Installation
+## Desktop downloads
+
+Non-technical users should download the ZIP for their operating system from the
+latest GitHub Release, extract it, and open TVTimeCompare. The application
+includes its own Python runtime and does not require a terminal or a separate
+Python installation.
+
+macOS releases are unsigned until Apple code-signing and notarization credentials
+are configured. macOS may require you to explicitly approve the first launch in
+System Settings.
+
+## Developer installation
 
 For local development:
 
@@ -51,6 +62,20 @@ The desktop interface uses the same readers, comparison engine, and report
 generator as the CLI. It keeps work off the interface thread, shows import and
 comparison progress, summarizes the result, and can open the generated HTML
 report or report folder.
+
+## Building desktop downloads
+
+PyInstaller creates native bundles and must run on the same operating system as
+the intended download. Build a ZIP locally after installing the build extra:
+
+```bash
+python -m pip install -e ".[gui,bundle]"
+python scripts/build_desktop.py
+```
+
+The archive is written to `package-dist/archives/`. Pushing a version tag such
+as `v0.1.0` runs the native macOS and Windows builds and attaches their ZIPs to
+the corresponding GitHub Release.
 
 ## Development
 
