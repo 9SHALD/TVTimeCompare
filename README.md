@@ -4,6 +4,10 @@ TVTimeCompare validates a migration from a TV Time GDPR export to a Refract
 export. It identifies TV Time watched episodes missing from Refract and records
 any source rows omitted during parsing.
 
+Exact normalized titles are matched before conservative RapidFuzz title matching.
+Fuzzy matches need a configurable confidence score and an unambiguous lead over
+the next candidate; uncertain matches are reported separately for review.
+
 ## Requirements
 
 - Python 3.12 or later

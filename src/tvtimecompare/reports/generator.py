@@ -7,7 +7,7 @@ from pathlib import Path
 
 from jinja2 import Environment, PackageLoader, select_autoescape
 
-from tvtimecompare.compare import ComparisonResult, MissingEpisode
+from tvtimecompare.compare import AmbiguousMatch, ComparisonResult, MissingEpisode
 from tvtimecompare.readers import ParseDiagnostics
 
 
@@ -17,6 +17,7 @@ class ReportPaths:
 
     summary_csv: Path
     missing_shows_csv: Path
+    ambiguous_matches_csv: Path
     missing_episodes_csv: Path
     report_html: Path
 
@@ -40,11 +41,13 @@ def generate_reports(
     paths = ReportPaths(
         summary_csv=output_dir / "summary.csv",
         missing_shows_csv=output_dir / "missing_shows.csv",
+        ambiguous_matches_csv=output_dir / "ambiguous_matches.csv",
         missing_episodes_csv=output_dir / "missing_episodes.csv",
         report_html=output_dir / "report.html",
     )
     _write_summary_csv(result, paths.summary_csv, diagnostics)
     _write_missing_shows_csv(result, paths.missing_shows_csv)
+    _write_ambiguous_matches_csv(result, paths.ambiguous_matches_csv)
     _write_missing_episodes_csv(result, paths.missing_episodes_csv)
     _write_html_report(result, paths.report_html, diagnostics)
     return paths
@@ -61,6 +64,7 @@ def _write_summary_csv(
         ("Refract shows", statistics.refract_show_count),
         ("Matched shows", statistics.matched_show_count),
         ("Missing shows", statistics.missing_show_count),
+        ("Ambiguous shows", statistics.ambiguous_show_count),
         ("TV Time episodes", statistics.tvtime_episode_count),
         ("Refract episodes", statistics.refract_episode_count),
         ("Missing episodes", statistics.missing_episode_count),
@@ -114,6 +118,22 @@ def _write_missing_shows_csv(result: ComparisonResult, path: Path) -> None:
             )
 
 
+def _write_ambiguous_matches_csv(result: ComparisonResult, path: Path) -> None:
+    fieldnames = ("TV Time Title", "Candidate Refract Title", "Confidence")
+    with path.open("w", encoding="utf-8", newline="") as report_file:
+        writer = csv.DictWriter(report_file, fieldnames=fieldnames)
+        writer.writeheader()
+        for ambiguous_match in result.ambiguous_matches:
+            for candidate in ambiguous_match.candidates:
+                writer.writerow(
+                    {
+                        "TV Time Title": ambiguous_match.tvtime_show.display_title,
+                        "Candidate Refract Title": candidate.refract_show.display_title,
+                        "Confidence": f"{candidate.confidence:.1f}",
+                    }
+                )
+
+
 def _write_missing_episodes_csv(result: ComparisonResult, path: Path) -> None:
     fieldnames = (
         "TV Time Title",
@@ -156,6 +176,7 @@ def _write_html_report(
             missing_shows=sorted(
                 result.missing_shows, key=lambda item: item.display_title.casefold()
             ),
+            ambiguous_matches=result.ambiguous_matches,
             missing_episode_sections=_missing_episode_sections(result.missing_episodes),
             diagnostics=diagnostics,
         ),

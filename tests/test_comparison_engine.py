@@ -2,7 +2,9 @@
 
 from typing import Literal
 
-from tvtimecompare.compare import compare_watched_episodes
+import pytest
+
+from tvtimecompare.compare import MatchingConfig, compare_watched_episodes
 from tvtimecompare.models import Episode, EpisodeKey, Show
 
 
@@ -41,6 +43,7 @@ def test_comparison_matches_in_identifier_priority_order() -> None:
 
     assert result.matches[0].refract_show is tmdb_match
     assert result.matches[0].method == "tmdb"
+    assert result.matches[0].confidence == 100.0
 
 
 def test_comparison_uses_tvdb_imdb_then_normalized_title() -> None:
@@ -80,6 +83,7 @@ def test_comparison_reports_missing_shows_episodes_and_statistics() -> None:
     assert result.statistics.refract_show_count == 1
     assert result.statistics.matched_show_count == 1
     assert result.statistics.missing_show_count == 1
+    assert result.statistics.ambiguous_show_count == 0
     assert result.statistics.tvtime_episode_count == 3
     assert result.statistics.refract_episode_count == 2
     assert result.statistics.missing_episode_count == 1
@@ -101,3 +105,93 @@ def test_comparison_does_not_match_ambiguous_or_reused_candidates() -> None:
 
     assert [match.tvtime_show for match in result.matches] == [first_same_id]
     assert result.missing_shows == (ambiguous, second_same_id)
+
+
+def test_fuzzy_matching_runs_only_after_all_exact_matches() -> None:
+    """A fuzzy candidate cannot consume a show needed for a later exact match."""
+    fuzzy_tvtime = _show("A Show Extended", "tvtime")
+    exact_tvtime = _show("A Show", "tvtime")
+    refract = _show("A Show", "refract")
+
+    result = compare_watched_episodes(
+        {"fuzzy": fuzzy_tvtime, "exact": exact_tvtime},
+        {"show": refract},
+        MatchingConfig(fuzzy_confidence_threshold=50),
+    )
+
+    assert len(result.matches) == 1
+    assert result.matches[0].tvtime_show is exact_tvtime
+    assert result.matches[0].method == "title"
+    assert result.missing_shows == (fuzzy_tvtime,)
+
+
+def test_fuzzy_matching_records_confidence_for_unique_candidate() -> None:
+    """A qualifying unique candidate becomes a scored fuzzy match."""
+    tvtime = _show("The Great Adventure", "tvtime")
+    refract = _show("Great Adventure", "refract")
+
+    result = compare_watched_episodes(
+        {"tvtime": tvtime},
+        {"refract": refract},
+        MatchingConfig(fuzzy_confidence_threshold=50),
+    )
+
+    assert result.matches[0].method == "fuzzy"
+    assert result.matches[0].confidence >= 50
+    assert result.missing_shows == ()
+    assert result.ambiguous_matches == ()
+
+
+def test_fuzzy_matching_rejects_low_confidence_and_close_candidates() -> None:
+    """Low confidence remains missing and close candidates remain ambiguous."""
+    tvtime = _show("The Great Adventure", "tvtime")
+    low_score = _show("Completely Different", "refract")
+    low_confidence_result = compare_watched_episodes(
+        {"tvtime": tvtime},
+        {"refract": low_score},
+        MatchingConfig(fuzzy_confidence_threshold=95),
+    )
+
+    assert low_confidence_result.missing_shows == (tvtime,)
+    assert low_confidence_result.ambiguous_matches == ()
+
+    close_one = _show("Great Adventure", "refract")
+    close_two = _show("Great Adventures", "refract")
+    ambiguous_result = compare_watched_episodes(
+        {"tvtime": tvtime},
+        {"one": close_one, "two": close_two},
+        MatchingConfig(fuzzy_confidence_threshold=50, fuzzy_ambiguity_threshold=100),
+    )
+
+    assert ambiguous_result.matches == ()
+    assert ambiguous_result.missing_shows == ()
+    assert ambiguous_result.statistics.ambiguous_show_count == 1
+    assert len(ambiguous_result.ambiguous_matches[0].candidates) == 2
+
+
+def test_fuzzy_matching_does_not_reuse_a_target_show() -> None:
+    """Only one source show can claim a unique fuzzy candidate."""
+    first_tvtime = _show("Great Adventure Extended", "tvtime")
+    second_tvtime = _show("Great Adventure Redux", "tvtime")
+    refract = _show("Great Adventure", "refract")
+
+    result = compare_watched_episodes(
+        {"first": first_tvtime, "second": second_tvtime},
+        {"refract": refract},
+        MatchingConfig(fuzzy_confidence_threshold=50),
+    )
+
+    assert len(result.matches) == 1
+    assert len(result.missing_shows) == 1
+
+
+@pytest.mark.parametrize(
+    "confidence, ambiguity",
+    ((-1, 0), (101, 0), (90, -1)),
+)
+def test_matching_config_rejects_invalid_thresholds(
+    confidence: float, ambiguity: float
+) -> None:
+    """Configuration rejects values outside RapidFuzz's valid score range."""
+    with pytest.raises(ValueError):
+        MatchingConfig(confidence, ambiguity)

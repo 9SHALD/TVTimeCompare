@@ -38,7 +38,30 @@
       <div class="card"><strong>{{ statistics.refract_show_count }}</strong><span>Refract shows</span></div>
       <div class="card"><strong>{{ statistics.matched_show_count }}</strong><span>Matched shows</span></div>
       <div class="card"><strong>{{ statistics.missing_show_count }}</strong><span>Missing shows</span></div>
+      <div class="card"><strong>{{ statistics.ambiguous_show_count }}</strong><span>Ambiguous shows</span></div>
       <div class="card"><strong>{{ statistics.missing_episode_count }}</strong><span>Missing episodes</span></div>
+    </section>
+
+    <section>
+      <h2>Ambiguous title matches</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>TV Time title</th><th>Candidate Refract title</th><th>Confidence</th></tr></thead>
+          <tbody>
+          {% for ambiguous_match in ambiguous_matches %}
+            {% for candidate in ambiguous_match.candidates %}
+              <tr>
+                <td>{{ ambiguous_match.tvtime_show.display_title }}</td>
+                <td>{{ candidate.refract_show.display_title }}</td>
+                <td>{{ "%.1f" | format(candidate.confidence) }}</td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr><td colspan="3" class="empty">No ambiguous title matches.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
     </section>
 
     <section>

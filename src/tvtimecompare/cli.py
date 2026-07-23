@@ -123,6 +123,7 @@ def _print_statistics(statistics: ComparisonStatistics) -> None:
         ("Refract shows", statistics.refract_show_count),
         ("Matched shows", statistics.matched_show_count),
         ("Missing shows", statistics.missing_show_count),
+        ("Ambiguous shows", statistics.ambiguous_show_count),
         ("TV Time episodes", statistics.tvtime_episode_count),
         ("Refract episodes", statistics.refract_episode_count),
         ("Missing episodes", statistics.missing_episode_count),

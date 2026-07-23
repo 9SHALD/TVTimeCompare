@@ -46,6 +46,7 @@ def test_compare_reads_exports_and_generates_reports(tmp_path: Path) -> None:
     assert "Reports written to" in result.output
     assert (output_dir / "summary.csv").is_file()
     assert (output_dir / "missing_shows.csv").is_file()
+    assert (output_dir / "ambiguous_matches.csv").is_file()
     assert (output_dir / "missing_episodes.csv").is_file()
     assert (output_dir / "report.html").is_file()
 

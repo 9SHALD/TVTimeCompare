@@ -4,7 +4,7 @@ import csv
 from pathlib import Path
 from typing import Literal
 
-from tvtimecompare.compare import compare_watched_episodes
+from tvtimecompare.compare import MatchingConfig, compare_watched_episodes
 from tvtimecompare.models import Episode, Show
 from tvtimecompare.readers import ParseDiagnostics, SkipReason
 from tvtimecompare.reports import generate_reports
@@ -49,6 +49,7 @@ def test_generate_reports_writes_csv_and_searchable_html(tmp_path: Path) -> None
         for path in (
             paths.summary_csv,
             paths.missing_shows_csv,
+            paths.ambiguous_matches_csv,
             paths.missing_episodes_csv,
             paths.report_html,
         )
@@ -92,3 +93,26 @@ def test_generate_reports_writes_csv_and_searchable_html(tmp_path: Path) -> None
     assert "Matched Show" in html
     assert "Import diagnostics" in html
     assert "episodes.csv" in html
+
+
+def test_reports_include_ambiguous_fuzzy_candidates(tmp_path: Path) -> None:
+    """Ambiguous candidates are written for review rather than hidden as gaps."""
+    tvtime = _show("The Great Adventure", "tvtime", ())
+    first_candidate = _show("Great Adventure", "refract", ())
+    second_candidate = _show("Great Adventures", "refract", ())
+    result = compare_watched_episodes(
+        {"tvtime": tvtime},
+        {"first": first_candidate, "second": second_candidate},
+        MatchingConfig(fuzzy_confidence_threshold=50, fuzzy_ambiguity_threshold=100),
+    )
+
+    paths = generate_reports(result, tmp_path / "reports")
+
+    with paths.ambiguous_matches_csv.open(newline="", encoding="utf-8") as report_file:
+        rows = list(csv.DictReader(report_file))
+    assert len(rows) == 2
+    assert {row["Candidate Refract Title"] for row in rows} == {
+        "Great Adventure",
+        "Great Adventures",
+    }
+    assert "Ambiguous title matches" in paths.report_html.read_text(encoding="utf-8")
