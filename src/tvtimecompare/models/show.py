@@ -37,6 +37,9 @@ class Show:
     source: SourceName
     source_show_id: str | None = None
     episodes: dict[EpisodeKey, Episode] = field(default_factory=dict)
+    tmdb_id: str | None = None
+    tvdb_id: str | None = None
+    imdb_id: str | None = None
 
     def add_episode(self, episode: Episode) -> bool:
         """Add an episode unless its logical key is already present.
